@@ -1,16 +1,14 @@
 import "./Toaster.css";
 import { useEffect } from "react";
-import { useContext } from "react";
-import { ToastListContext } from "./ToastContexts";
 import { Toast } from "react-bootstrap";
-import { useMessageActions } from "./MessageHooks";
+import { useMessageActions, useMessageList } from "./MessageHooks";
 
 interface Props {
   position: string;
 }
 
 const Toaster = ({ position }: Props) => {
-  const toastList = useContext(ToastListContext);
+  const toastList = useMessageList();
   const { deleteMessage } = useMessageActions();
 
   useEffect(() => {
