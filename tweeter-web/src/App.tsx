@@ -68,6 +68,7 @@ const AuthenticatedRoutes = () => {
         <Route path="story/:displayedUser" element={<StoryScroller />} />
         <Route path="followees/:displayedUser" element={
           <UserItemScroller
+            key={`followees-${displayedUser!.alias}`}
             itemDescription="followees"
             loadItems={(authToken, userAlias, pageSize, lastItem) =>
               loadMoreFollowees(authToken, userAlias, pageSize, lastItem)
@@ -76,6 +77,7 @@ const AuthenticatedRoutes = () => {
         } />
         <Route path="followers/:displayedUser" element={
           <UserItemScroller
+            key={`followers-${displayedUser!.alias}`}
             itemDescription="followers"
             loadItems={(authToken, userAlias, pageSize, lastItem) =>
               loadMoreFollowers(authToken, userAlias, pageSize, lastItem)
