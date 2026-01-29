@@ -3,8 +3,8 @@ import { ToastActionsContext } from "./ToastContexts";
 import { ToastType } from "./Toast";
 
 interface MessageActions {
-  displayInfoMessage: (message: string, duration: number, bootstrapClasses?: string) => void;
-  displayErrorMessage: (message: string, bootstrapClasses?: string) => void;
+  displayInfoMessage: (message: string, duration: number, bootstrapClasses?: string) => string;
+  displayErrorMessage: (message: string, bootstrapClasses?: string) => string;
  deleteMessage: (messageId: string) => void;
  deleteAllMessages: () => void;
 }
