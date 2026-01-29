@@ -1,14 +1,16 @@
 import { Status } from "tweeter-shared";
 import { Link } from "react-router-dom";
 import Post from "./Post";
+import { useUserNavigation } from "../userInfo/UserNavigationHook";
 
 interface Props {
   item: Status;
   featurePath: string;
-  navigateToUser: (event: React.MouseEvent) => Promise<void>;
 }
 
-const StatusItem = ({ item, featurePath, navigateToUser }: Props) => {
+const StatusItem = ({ item, featurePath }: Props) => {
+  const { navigateToUser } = useUserNavigation(featurePath);
+
   return (
     <div className="row mb-3 mx-0 px-0 border rounded bg-white">
       <div className="col bg-light mx-0 px-0">

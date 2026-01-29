@@ -3,7 +3,7 @@ import { AuthToken, FakeData, Status, User } from "tweeter-shared";
 import { useState, useEffect } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { useMessageActions } from "../toaster/MessageHooks";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import StatusItem from "./StatusItem";
 
 export const PAGE_SIZE = 10;
@@ -23,7 +23,6 @@ const StatusItemScroller = ({ itemDescription, loadItems }: Props) => {
   const [items, setItems] = useState<Status[]>([]);
   const [hasMoreItems, setHasMoreItems] = useState(true);
   const [lastItem, setLastItem] = useState<Status | null>(null);
-  const navigate = useNavigate();
 
   const addItems = (newItems: Status[]) =>
     setItems((previousItems) => [...previousItems, ...newItems]);
@@ -31,6 +30,14 @@ const StatusItemScroller = ({ itemDescription, loadItems }: Props) => {
   const { displayedUser, authToken } = useUserInfo();
   const { setDisplayedUser } = useUserInfoActions();
   const { displayedUser: displayedUserAliasParam } = useParams();
+
+  const getUser = async (
+    authToken: AuthToken,
+    alias: string
+  ): Promise<User | null> => {
+    // TODO: Replace with the result of calling server
+    return FakeData.instance.findUserByAlias(alias);
+  };
 
   // Update the displayed user context variable whenever the displayedUser url parameter changes. This allows browser forward and back buttons to work correctly.
   useEffect(() => {
@@ -78,40 +85,6 @@ const StatusItemScroller = ({ itemDescription, loadItems }: Props) => {
     }
   };
 
-  const navigateToUser = async (event: React.MouseEvent): Promise<void> => {
-    event.preventDefault();
-
-    try {
-      const alias = extractAlias(event.target.toString());
-
-      const toUser = await getUser(authToken!, alias);
-
-      if (toUser) {
-        if (!toUser.equals(displayedUser!)) {
-          setDisplayedUser(toUser);
-          navigate(`/${itemDescription}/${toUser.alias}`);
-        }
-      }
-    } catch (error) {
-      displayErrorMessage(
-        `Failed to get user because of exception: ${error}`
-      );
-    }
-  };
-
-  const extractAlias = (value: string): string => {
-    const index = value.indexOf("@");
-    return value.substring(index);
-  };
-
-  const getUser = async (
-    authToken: AuthToken,
-    alias: string
-  ): Promise<User | null> => {
-    // TODO: Replace with the result of calling server
-    return FakeData.instance.findUserByAlias(alias);
-  };
-
   return (
     <div className="container px-0 overflow-visible vh-100">
       <InfiniteScroll
@@ -126,7 +99,6 @@ const StatusItemScroller = ({ itemDescription, loadItems }: Props) => {
             key={index}
             item={item}
             featurePath={`/${itemDescription}`}
-            navigateToUser={navigateToUser}
           />
         ))}
       </InfiniteScroll>
