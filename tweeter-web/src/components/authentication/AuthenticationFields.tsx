@@ -26,10 +26,10 @@ interface PasswordFieldProps extends AuthenticationFieldProps {
 
 export const PasswordField = ({ onKeyDown, onChange, bottomField = false }: PasswordFieldProps) => {
   return (
-    <div className={`form-floating${bottomField ? " mb-3" : ""}`}>
+    <div className={`form-floating ${bottomField ? " mb-3" : ""}`}>
       <input
         type="password"
-        className={`form-control${bottomField ? " bottom" : ""}`}
+        className={`form-control ${bottomField ? " bottom" : ""}`}
         id="passwordInput"
         placeholder="Password"
         onKeyDown={onKeyDown}
