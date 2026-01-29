@@ -9,11 +9,21 @@ import InfiniteScroll from "react-infinite-scroll-component";
 import { ToastActionsContext } from "../toaster/ToastContexts";
 import { useNavigate, useParams } from "react-router-dom";
 import { ToastType } from "../toaster/Toast";
-import StatusItem from "../statusItem/StatusItem";
+import StatusItem from "./StatusItem";
 
 export const PAGE_SIZE = 10;
 
-const FeedScroller = () => {
+interface Props {
+  itemDescription: string;
+  loadItems: (
+    authToken: AuthToken,
+    userAlias: string,
+    pageSize: number,
+    lastItem: Status | null
+  ) => Promise<[Status[], boolean]>;
+}
+
+const StatusItemScroller = ({ itemDescription, loadItems }: Props) => {
   const { displayToast } = useContext(ToastActionsContext);
   const [items, setItems] = useState<Status[]>([]);
   const [hasMoreItems, setHasMoreItems] = useState(true);
@@ -56,7 +66,7 @@ const FeedScroller = () => {
 
   const loadMoreItems = async (lastItem: Status | null) => {
     try {
-      const [newItems, hasMore] = await loadMoreFeedItems(
+      const [newItems, hasMore] = await loadItems(
         authToken!,
         displayedUser!.alias,
         PAGE_SIZE,
@@ -69,20 +79,10 @@ const FeedScroller = () => {
     } catch (error) {
       displayToast(
         ToastType.Error,
-        `Failed to load feed items because of exception: ${error}`,
+        `Failed to load ${itemDescription} items because of exception: ${error}`,
         0
       );
     }
-  };
-
-  const loadMoreFeedItems = async (
-    authToken: AuthToken,
-    userAlias: string,
-    pageSize: number,
-    lastItem: Status | null
-  ): Promise<[Status[], boolean]> => {
-    // TODO: Replace with the result of calling server
-    return FakeData.instance.getPageOfStatuses(lastItem, pageSize);
   };
 
   const navigateToUser = async (event: React.MouseEvent): Promise<void> => {
@@ -96,7 +96,7 @@ const FeedScroller = () => {
       if (toUser) {
         if (!toUser.equals(displayedUser!)) {
           setDisplayedUser(toUser);
-          navigate(`/feed/${toUser.alias}`);
+          navigate(`/${itemDescription}/${toUser.alias}`);
         }
       }
     } catch (error) {
@@ -134,7 +134,7 @@ const FeedScroller = () => {
           <StatusItem
             key={index}
             item={item}
-            featurePath="/feed"
+            featurePath={`/${itemDescription}`}
             navigateToUser={navigateToUser}
           />
         ))}
@@ -143,4 +143,4 @@ const FeedScroller = () => {
   );
 };
 
-export default FeedScroller;
+export default StatusItemScroller;
