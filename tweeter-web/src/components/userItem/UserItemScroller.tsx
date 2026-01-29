@@ -1,8 +1,4 @@
-import { useContext } from "react";
-import {
-  UserInfoContext,
-  UserInfoActionsContext,
-} from "../userInfo/UserInfoContexts";
+import { useUserInfo, useUserInfoActions } from "../userInfo/UserInfoHooks";
 import { useState, useEffect } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { AuthToken, FakeData, User } from "tweeter-shared";
@@ -31,8 +27,8 @@ const UserItemScroller = ({ itemDescription, loadItems }: Props) => {
   const addItems = (newItems: User[]) =>
     setItems((previousItems) => [...previousItems, ...newItems]);
 
-  const { displayedUser, authToken } = useContext(UserInfoContext);
-  const { setDisplayedUser } = useContext(UserInfoActionsContext);
+  const { displayedUser, authToken } = useUserInfo();
+  const { setDisplayedUser } = useUserInfoActions();
   const { displayedUser: displayedUserAliasParam } = useParams();
 
   const getUser = async (

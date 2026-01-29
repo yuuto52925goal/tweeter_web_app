@@ -1,9 +1,5 @@
 import "./AppNavbar.css";
-import { useContext } from "react";
-import {
-  UserInfoContext,
-  UserInfoActionsContext,
-} from "../userInfo/UserInfoContexts";
+import { useUserInfo, useUserInfoActions } from "../userInfo/UserInfoHooks";
 import { Container, Nav, Navbar } from "react-bootstrap";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Image from "react-bootstrap/Image";
@@ -12,8 +8,8 @@ import { AuthToken } from "tweeter-shared";
 
 const AppNavbar = () => {
   const location = useLocation();
-  const { authToken, displayedUser } = useContext(UserInfoContext);
-  const { clearUserInfo } = useContext(UserInfoActionsContext);
+  const { authToken, displayedUser } = useUserInfo();
+  const { clearUserInfo } = useUserInfoActions();
   const navigate = useNavigate();
   const { displayInfoMessage, displayErrorMessage, deleteMessage } = useMessageActions();
 
