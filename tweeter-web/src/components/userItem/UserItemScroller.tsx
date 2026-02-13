@@ -5,6 +5,7 @@ import { AuthToken, FakeData, User } from "tweeter-shared";
 import { useMessageActions } from "../toaster/MessageHooks";
 import { useParams } from "react-router-dom";
 import UserItem from "./UserItem";
+import { FolloweePresenter, FolloweeView } from "../../presenter/FolloweePresenter";
 
 export const PAGE_SIZE = 10;
 
@@ -31,12 +32,15 @@ const UserItemScroller = ({ itemDescription, loadItems }: Props) => {
   const { setDisplayedUser } = useUserInfoActions();
   const { displayedUser: displayedUserAliasParam } = useParams();
 
+  const listener: FolloweeView = {}
+
+  const presenter = new FolloweePresenter(listener);
+
   const getUser = async (
     authToken: AuthToken,
     alias: string
   ): Promise<User | null> => {
-    // TODO: Replace with the result of calling server
-    return FakeData.instance.findUserByAlias(alias);
+    return await presenter.getUser(authToken, alias);
   };
 
   // Update the displayed user context variable whenever the displayedUser url parameter changes. This allows browser forward and back buttons to work correctly.
