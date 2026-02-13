@@ -13,9 +13,10 @@ import MainLayout from "./components/mainLayout/MainLayout";
 import Toaster from "./components/toaster/Toaster";
 import UserItemScroller from "./components/userItem/UserItemScroller";
 import StatusItemScroller from "./components/statusItem/StatusItemScroller";
-import { AuthToken, FakeData, Status, User } from "tweeter-shared";
 import { FolloweePresenter } from "./presenter/FolloweePresenter";
 import { FollowerPresenter } from "./presenter/FollowerPresenter";
+import { FeedPresenter } from "./presenter/FeedPresenter";
+import { StoryPresenter } from "./presenter/StoryPresenter";
 
 const App = () => {
   const { currentUser, authToken } = useUserInfo();
@@ -42,26 +43,6 @@ const App = () => {
 const AuthenticatedRoutes = () => {
   const { displayedUser } = useUserInfo();
 
-  const loadMoreFeedItems = async (
-    authToken: AuthToken,
-    userAlias: string,
-    pageSize: number,
-    lastItem: Status | null
-  ): Promise<[Status[], boolean]> => {
-    // TODO: Replace with the result of calling server
-    return FakeData.instance.getPageOfStatuses(lastItem, pageSize);
-  };
-
-  const loadMoreStoryItems = async (
-    authToken: AuthToken,
-    userAlias: string,
-    pageSize: number,
-    lastItem: Status | null
-  ): Promise<[Status[], boolean]> => {
-    // TODO: Replace with the result of calling server
-    return FakeData.instance.getPageOfStatuses(lastItem, pageSize);
-  };
-
   return (
     <Routes>
       <Route element={<MainLayout />}>
@@ -70,14 +51,14 @@ const AuthenticatedRoutes = () => {
           <StatusItemScroller
             key={`feed-${displayedUser!.alias}`}
             itemDescription="feed"
-            loadItems={loadMoreFeedItems}
+            presenterFactory={(view) => new FeedPresenter(view)}
           />
         } />
         <Route path="story/:displayedUser" element={
           <StatusItemScroller
             key={`story-${displayedUser!.alias}`}
             itemDescription="story"
-            loadItems={loadMoreStoryItems}
+            presenterFactory={(view) => new StoryPresenter(view)}
           />
         } />
         <Route path="followees/:displayedUser" element={
