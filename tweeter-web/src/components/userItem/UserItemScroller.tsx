@@ -1,5 +1,5 @@
 import { useUserInfo, useUserInfoActions } from "../userInfo/UserInfoHooks";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { AuthToken, User } from "tweeter-shared";
 import { useMessageActions } from "../toaster/MessageHooks";
@@ -28,13 +28,16 @@ const UserItemScroller = ({ itemDescription, presenterFactory }: Props) => {
     displayErrorMessage: displayErrorMessage,
   }
 
-  const presenter = presenterFactory(listener);
+  const presenter = useRef<UserItemPresenter | null>(null);
+  if (!presenter.current) {
+    presenter.current = presenterFactory(listener);
+  }
 
   const getUser = async (
     authToken: AuthToken,
     alias: string
   ): Promise<User | null> => {
-    return await presenter.getUser(authToken, alias);
+    return await presenter.current!.getUser(authToken, alias);
   };
 
   // Update the displayed user context variable whenever the displayedUser url parameter changes. This allows browser forward and back buttons to work correctly.
@@ -60,11 +63,11 @@ const UserItemScroller = ({ itemDescription, presenterFactory }: Props) => {
 
   const reset = async () => {
     setItems(() => []);
-    presenter.reset();
+    presenter.current!.reset();
   };
 
   const loadMoreItems = async () => {
-    presenter.loadMoreItems(authToken!, displayedUser!.alias);
+    presenter.current!.loadMoreItems(authToken!, displayedUser!.alias);
   };
 
   return (
@@ -73,7 +76,7 @@ const UserItemScroller = ({ itemDescription, presenterFactory }: Props) => {
         className="pr-0 mr-0"
         dataLength={items.length}
         next={() => loadMoreItems()}
-        hasMore={presenter.hasMoreItems}
+        hasMore={presenter.current!.hasMoreItems}
         loader={<h4>Loading...</h4>}
       >
         {items.map((item, index) => (
