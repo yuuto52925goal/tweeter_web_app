@@ -2,6 +2,7 @@ import { AuthToken } from "tweeter-shared/dist/model/domain/AuthToken";
 import { Status } from "tweeter-shared/dist/model/domain/Status";
 import { User } from "tweeter-shared/dist/model/domain/User";
 import { StatusService } from "../model.service/StatusService";
+import { Presenter } from "./Presenter";
 
 export interface PostStatusView {
   setIsLoading: (isLoading: boolean) => void;
@@ -11,17 +12,12 @@ export interface PostStatusView {
   setPost: (post: string) => void;
 }
 
-export class PostStatusPresenter {
-  private _view: PostStatusView;
+export class PostStatusPresenter extends Presenter<PostStatusView> {
   private statusService: StatusService;
 
   public constructor(view: PostStatusView) {
-    this._view = view;
+    super(view)
     this.statusService = new StatusService();
-  }
-
-  public get view(): PostStatusView {
-    return this._view;
   }
 
   public async submitPost(
@@ -29,23 +25,14 @@ export class PostStatusPresenter {
     post: string,
     currentUser: User
   ): Promise<void> {
-    try {
+    this.doFailureReportingOperation(async () => {
       this.view.setIsLoading(true);
       const postingStatusToastId = this.view.displayInfoMessage("Posting status...", 0);
-
       const status = new Status(post, currentUser, Date.now());
-
       await this.statusService.postStatus(authToken, status);
-
       this.view.setPost("");
       this.view.displayInfoMessage("Status posted!", 2000);
       this.view.deleteMessage(postingStatusToastId);
-    } catch (error) {
-      this.view.displayErrorMessage(
-        `Failed to post the status because of exception: ${error}`
-      );
-    } finally {
-      this.view.setIsLoading(false);
-    }
+    }, "post the status")
   }
 }

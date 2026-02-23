@@ -1,6 +1,7 @@
 import { AuthToken } from "tweeter-shared/dist/model/domain/AuthToken";
 import { User } from "tweeter-shared/dist/model/domain/User";
 import { UserService } from "../model.service/UserService";
+import { Presenter } from "./Presenter";
 
 export interface RegisterView {
   updateUserInfo: (
@@ -14,17 +15,12 @@ export interface RegisterView {
   setIsLoading: (isLoading: boolean) => void;
 }
 
-export class RegisterPresenter {
-  private _view: RegisterView;
+export class RegisterPresenter extends Presenter<RegisterView>{
   private userService: UserService;
 
   public constructor(view: RegisterView) {
-    this._view = view;
+    super(view)
     this.userService = new UserService();
-  }
-
-  public get view(): RegisterView {
-    return this._view;
   }
 
   public async doRegister(
@@ -36,9 +32,8 @@ export class RegisterPresenter {
     imageFileExtension: string,
     rememberMe: boolean
   ) {
-    try {
+    this.doFailureReportingOperation(async () =>{
       this.view.setIsLoading(true);
-
       const [user, authToken] = await this.userService.register(
         firstName,
         lastName,
@@ -47,15 +42,8 @@ export class RegisterPresenter {
         imageBytes,
         imageFileExtension
       );
-
       this.view.updateUserInfo(user, user, authToken, rememberMe);
       this.view.navigate(`/feed/${user.alias}`);
-    } catch (error) {
-      this.view.displayErrorMessage(
-        `Failed to register user because of exception: ${error}`
-      );
-    } finally {
-      this.view.setIsLoading(false);
-    }
+    }, "register user")
   }
 }
