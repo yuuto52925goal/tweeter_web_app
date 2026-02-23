@@ -16,7 +16,7 @@ export abstract class PageItemPresenter<T, U extends Service> extends Presenter<
   private userService: UserService = new UserService();
   private _service: U;
 
-  protected constructor(view: PageItemView<T>){
+  constructor(view: PageItemView<T>){
     super(view)
     this._service = this.serviceFactory()
   }

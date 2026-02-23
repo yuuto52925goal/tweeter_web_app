@@ -5,13 +5,14 @@ import { AuthToken, User } from "tweeter-shared";
 import { useMessageActions } from "../toaster/MessageHooks";
 import { useParams } from "react-router-dom";
 import UserItem from "./UserItem";
-import { UserItemPresenter, UserItemView } from "../../presenter/UserItemPresenter";
+import { UserItemPresenter } from "../../presenter/UserItemPresenter";
+import { PageItemView } from "../../presenter/PageItemPresenter";
 
 export const PAGE_SIZE = 10;
 
 interface Props {
   itemDescription: string;
-  presenterFactory: (view: UserItemView) => UserItemPresenter;
+  presenterFactory: (view: PageItemView<User>) => UserItemPresenter;
 }
 
 const UserItemScroller = ({ itemDescription, presenterFactory }: Props) => {
@@ -22,7 +23,7 @@ const UserItemScroller = ({ itemDescription, presenterFactory }: Props) => {
   const { setDisplayedUser } = useUserInfoActions();
   const { displayedUser: displayedUserAliasParam } = useParams();
 
-  const listener: UserItemView = {
+  const listener: PageItemView<User> = {
     addItems: (newItems: User[]) =>
       setItems((previousItems) => [...previousItems, ...newItems]),
     displayErrorMessage: displayErrorMessage,
