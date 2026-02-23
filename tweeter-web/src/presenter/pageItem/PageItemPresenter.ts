@@ -1,8 +1,8 @@
 import { User } from "tweeter-shared/dist/model/domain/User";
-import { UserService } from "../model.service/UserService";
-import { Presenter, PresenterView } from "./Presenter";
+import { UserService } from "../../model.service/UserService";
+import { Presenter, PresenterView } from "../Presenter";
 import { AuthToken } from "tweeter-shared/dist/model/domain/AuthToken";
-import { Service } from "../model.service/Service";
+import { Service } from "../../model.service/Service";
 
 export const PAGE_SIZE = 10;
 

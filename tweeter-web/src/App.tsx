@@ -13,10 +13,10 @@ import MainLayout from "./components/mainLayout/MainLayout";
 import Toaster from "./components/toaster/Toaster";
 import UserItemScroller from "./components/userItem/UserItemScroller";
 import StatusItemScroller from "./components/statusItem/StatusItemScroller";
-import { FolloweePresenter } from "./presenter/FolloweePresenter";
-import { FollowerPresenter } from "./presenter/FollowerPresenter";
-import { FeedPresenter } from "./presenter/FeedPresenter";
-import { StoryPresenter } from "./presenter/StoryPresenter";
+import { FolloweePresenter } from "./presenter/pageItem/userItem/each/FolloweePresenter";
+import { FollowerPresenter } from "./presenter/pageItem/userItem/each/FollowerPresenter";
+import { FeedPresenter } from "./presenter/pageItem/status/each/FeedPresenter";
+import { StoryPresenter } from "./presenter/pageItem/status/each/StoryPresenter";
 
 const App = () => {
   const { currentUser, authToken } = useUserInfo();

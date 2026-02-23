@@ -5,8 +5,8 @@ import { AuthToken, Status, User } from "tweeter-shared";
 import { useMessageActions } from "../toaster/MessageHooks";
 import { useParams } from "react-router-dom";
 import StatusItem from "./StatusItem";
-import { StatusItemPresenter } from "../../presenter/StatusItemPresenter";
-import { PageItemView } from "../../presenter/PageItemPresenter";
+import { StatusItemPresenter } from "../../presenter/pageItem/status/StatusItemPresenter";
+import { PageItemView } from "../../presenter/pageItem/PageItemPresenter";
 
 export const PAGE_SIZE = 10;
 

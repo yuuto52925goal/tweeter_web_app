@@ -1,7 +1,7 @@
 import { AuthToken } from "tweeter-shared/dist/model/domain/AuthToken";
-import { UserItemPresenter } from "./UserItemPresenter";
+import { UserItemPresenter } from "../UserItemPresenter";
 import { User } from "tweeter-shared";
-import { PAGE_SIZE } from "./PageItemPresenter";
+import { PAGE_SIZE } from "../../PageItemPresenter";
 
 export class FollowerPresenter extends UserItemPresenter {
   protected itemDescription(): string {
