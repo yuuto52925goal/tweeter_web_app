@@ -1,13 +1,14 @@
 import { AuthToken } from "tweeter-shared/dist/model/domain/AuthToken";
 import { StatusService } from "../model.service/StatusService";
-import { StatusItemPresenter, StatusItemView } from "./StatusItemPresenter";
+import { StatusItemPresenter } from "./StatusItemPresenter";
 import { Status } from "tweeter-shared/dist/model/domain/Status";
 import { PAGE_SIZE } from "./FeedPresenter";
+import { PageItemView } from "./PageItemPresenter";
 
 export class StoryPresenter extends StatusItemPresenter {
     private service: StatusService;
 
-    public constructor(view: StatusItemView) {
+    public constructor(view: PageItemView<Status>) {
       super(view);
       this.service = new StatusService();
     }
