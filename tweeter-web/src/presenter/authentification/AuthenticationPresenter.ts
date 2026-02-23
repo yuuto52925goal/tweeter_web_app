@@ -28,6 +28,6 @@ export abstract class AuthenticationPresenter<V extends AuthView> extends Presen
       const [user, authToken] = await authOperation();
       this.view.updateUserInfo(user, user, authToken, rememberMe);
       this.view.navigate(navigateUrl(user));
-    }, operationName);
+    }, operationName, () => this.view.setIsLoading(false));
   }
 }

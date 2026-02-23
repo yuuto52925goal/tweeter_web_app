@@ -30,6 +30,6 @@ export class PostStatusPresenter extends Presenter<PostStatusView> {
       this.view.setPost("");
       this.view.displayInfoMessage("Status posted!", 2000);
       this.view.deleteMessage(postingStatusToastId);
-    }, "post the status")
+    }, "post the status", () => this.view.setIsLoading(false))
   }
 }

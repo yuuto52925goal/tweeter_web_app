@@ -18,13 +18,19 @@ export abstract class Presenter<V extends PresenterView> {
     return this._view;
   }
 
-  public async doFailureReportingOperation(operation: () => Promise<void>, operationName: string) {
+  public async doFailureReportingOperation(
+    operation: () => Promise<void>,
+    operationName: string,
+    finallyOperation?: () => void
+  ) {
     try {
       await operation();
     } catch (error) {
       this.view.displayErrorMessage(
         `Failed to perform ${operationName} because of exception: ${error}`
       );
+    } finally {
+      finallyOperation?.();
     }
   }
 }

@@ -74,7 +74,7 @@ export class UserInfoPresenter extends Presenter<UserInfoView>{
       this.view.setFollowerCount(followerCount);
       this.view.setFolloweeCount(followeeCount);
       this.view.deleteMessage(followingUserToast);
-    }, "follow user")
+    }, "follow user", () => this.view.setIsLoading(false))
   }
 
   public async unfollowDisplayedUser(
@@ -95,6 +95,6 @@ export class UserInfoPresenter extends Presenter<UserInfoView>{
       this.view.setFollowerCount(followerCount);
       this.view.setFolloweeCount(followeeCount);
       this.view.deleteMessage(unfollowingUserToast);
-    }, "unfollow user")
+    }, "unfollow user", () => this.view.setIsLoading(false))
   }
 }
