@@ -2,8 +2,9 @@ import { AuthToken } from "tweeter-shared/dist/model/domain/AuthToken";
 import { Status } from "tweeter-shared/dist/model/domain/Status";
 import { User } from "tweeter-shared/dist/model/domain/User";
 import { FakeData } from "tweeter-shared/dist/util/FakeData";
+import { Service } from "./Service";
 
-export class FollowService {
+export class FollowService implements Service{
 
       public async loadMoreFollowees (
         authToken: AuthToken,
