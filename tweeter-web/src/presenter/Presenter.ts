@@ -1,6 +1,12 @@
 export interface PresenterView {
   displayErrorMessage: (message: string) => void;
 }
+
+export interface MessageView extends PresenterView {
+  displayInfoMessage: (message: string, duration: number) => string;
+  deleteMessage: (id: string) => void;
+}
+
 export abstract class Presenter<V extends PresenterView> {
   private _view: V;
 
@@ -12,12 +18,12 @@ export abstract class Presenter<V extends PresenterView> {
     return this._view;
   }
 
-  public async doFailureReportingOperation(operation: () => Promise<void>) {
+  public async doFailureReportingOperation(operation: () => Promise<void>, operationName: string) {
     try {
       await operation();
     } catch (error) {
       this.view.displayErrorMessage(
-        `Failed to perform operation because of exception: ${error}`
+        `Failed to perform ${operationName} because of exception: ${error}`
       );
     }
   }
