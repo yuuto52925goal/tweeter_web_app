@@ -23,7 +23,7 @@ export abstract class AuthenticationPresenter<V extends AuthView> extends Presen
     navigateUrl: (user: User) => string,
     operationName: string
   ) {
-    this.doFailureReportingOperation(async () => {
+    await this.doFailureReportingOperation(async () => {
       this.view.setIsLoading(true);
       const [user, authToken] = await authOperation();
       this.view.updateUserInfo(user, user, authToken, rememberMe);

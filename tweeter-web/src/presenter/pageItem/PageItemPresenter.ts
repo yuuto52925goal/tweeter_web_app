@@ -54,7 +54,7 @@ export abstract class PageItemPresenter<T, U extends Service> extends Presenter<
   };
 
   public async loadMoreItems (authToken: AuthToken, userAlias: string) {
-    this.doFailureReportingOperation(async () => {
+    await this.doFailureReportingOperation(async () => {
       const [newItems, hasMore] = await this.getMoreItem(authToken, userAlias)
       this.hasMoreItems = hasMore;
       this.lastItem = newItems.length > 0 ? newItems[newItems.length - 1] : null;

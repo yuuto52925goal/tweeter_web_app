@@ -22,7 +22,7 @@ export class UserNavigationPresenter extends Presenter<UserNavigationView> {
     displayedUser: User,
     featurePath: string
   ): Promise<void> {
-    this.doFailureReportingOperation(async () => {
+    await this.doFailureReportingOperation(async () => {
       const toUser = await this.userService.getUser(authToken, alias);
 
       if (toUser) {
