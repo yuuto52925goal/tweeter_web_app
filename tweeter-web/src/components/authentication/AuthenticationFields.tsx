@@ -11,6 +11,7 @@ export const AliasField = ({ onKeyDown, onChange }: AuthenticationFieldProps) =>
         className="form-control"
         size={50}
         id="aliasInput"
+        aria-label="alias"
         placeholder="name@example.com"
         onKeyDown={onKeyDown}
         onChange={(event) => onChange(event.target.value)}
@@ -32,6 +33,7 @@ export const PasswordField = ({ onKeyDown, onChange, bottomField = false }: Pass
         className={`form-control ${bottomField ? " bottom" : ""}`}
         id="passwordInput"
         placeholder="Password"
+        aria-label="password"
         onKeyDown={onKeyDown}
         onChange={(event) => onChange(event.target.value)}
       />
