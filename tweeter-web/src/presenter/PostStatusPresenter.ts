@@ -10,11 +10,15 @@ export interface PostStatusView extends MessageView {
 }
 
 export class PostStatusPresenter extends Presenter<PostStatusView> {
-  private statusService: StatusService;
+  private _statusService: StatusService;
 
   public constructor(view: PostStatusView) {
     super(view)
-    this.statusService = new StatusService();
+    this._statusService = new StatusService();
+  }
+
+  public get service(): StatusService {
+    return this._statusService;
   }
 
   public async submitPost(
@@ -22,14 +26,16 @@ export class PostStatusPresenter extends Presenter<PostStatusView> {
     post: string,
     currentUser: User
   ): Promise<void> {
+    this.view.setIsLoading(true);
+    const postingStatusToastId = this.view.displayInfoMessage("Posting status...", 0);
     this.doFailureReportingOperation(async () => {
-      this.view.setIsLoading(true);
-      const postingStatusToastId = this.view.displayInfoMessage("Posting status...", 0);
       const status = new Status(post, currentUser, Date.now());
-      await this.statusService.postStatus(authToken, status);
+      await this.service.postStatus(authToken, status);
       this.view.setPost("");
       this.view.displayInfoMessage("Status posted!", 2000);
+    }, "post the status", () => {
       this.view.deleteMessage(postingStatusToastId);
-    }, "post the status", () => this.view.setIsLoading(false))
+      this.view.setIsLoading(false);
+    })
   }
 }
