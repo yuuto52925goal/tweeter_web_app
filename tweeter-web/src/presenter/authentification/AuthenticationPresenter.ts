@@ -14,7 +14,7 @@ export interface AuthView extends PresenterView {
   setIsLoading: (isLoading: boolean) => void;
 }
 
-export abstract class AuthenticationPresenter<V extends AuthView> extends Presenter<V> {
+export class AuthenticationPresenter<V extends AuthView> extends Presenter<V> {
   protected userService: UserService = new UserService();
 
   protected async doAuthenticationOperation(

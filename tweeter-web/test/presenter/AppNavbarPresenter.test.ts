@@ -33,7 +33,7 @@ describe("AppNavbarPresenter", ()=> {
     await appNavbarPresenter.logOut(authToken)
     verify(mockAppNavbarPresenterView.deleteMessage("abc123id")).once()
     verify(mockAppNavbarPresenterView.clearUserInfo()).once()
-    verify(mockAppNavbarPresenterView.navigate(anything())).once()
+    verify(mockAppNavbarPresenterView.navigate("/login")).once()
     verify(mockAppNavbarPresenterView.displayErrorMessage(anything())).never()
   })
 
