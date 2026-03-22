@@ -1,6 +1,12 @@
 import { PostSegment, Type } from "./PostSegment";
-import { User } from "./User";
+import { User, UserDto } from "./User";
 import { format } from "date-fns";
+
+export interface StatusDto {
+  post: string;
+  user: UserDto;
+  timestamp: number;
+}
 
 export class Status {
   private _post: string;
@@ -269,6 +275,23 @@ export class Status {
     } else {
       return null;
     }
+  }
+
+  public toDto(): StatusDto {
+    return {
+      post: this._post,
+      user: this._user.toDto(),
+      timestamp: this._timestamp,
+    };
+  }
+
+  public static fromDto(dto: StatusDto | null): Status | null {
+    if (dto == null) return null;
+    return new Status(
+      dto.post,
+      new User(dto.user.firstName, dto.user.lastName, dto.user.alias, dto.user.imageUrl),
+      dto.timestamp
+    );
   }
 
   public toJson(): string {

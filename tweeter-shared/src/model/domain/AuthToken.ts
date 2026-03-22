@@ -1,4 +1,10 @@
 import { v4 as uuid } from "uuid";
+
+export interface AuthTokenDto {
+  token: string;
+  timestamp: number;
+}
+
 export class AuthToken {
   private _token: string;
   private _timestamp: number;
@@ -57,6 +63,15 @@ export class AuthToken {
     } else {
       return null;
     }
+  }
+
+  public toDto(): AuthTokenDto {
+    return { token: this._token, timestamp: this._timestamp };
+  }
+
+  public static fromDto(dto: AuthTokenDto | null): AuthToken | null {
+    if (dto == null) return null;
+    return new AuthToken(dto.token, dto.timestamp);
   }
 
   public toJson(): string {
