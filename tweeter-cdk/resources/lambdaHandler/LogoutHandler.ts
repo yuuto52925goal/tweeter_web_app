@@ -1,16 +1,16 @@
-import { GetUserRequest, GetUserResponse } from "tweeter-shared";
+import { LogoutRequest, LogoutResponse } from "tweeter-shared";
 import { UserService } from "../service/UserService";
 
 const service = new UserService();
 
 export const handler = async (event: any): Promise<any> => {
   try {
-    const req: GetUserRequest = JSON.parse(event.body);
-    const user = await service.getUser(req.authToken, req.alias);
-    const response: GetUserResponse = { success: true, message: null, user };
+    const req: LogoutRequest = JSON.parse(event.body);
+    await service.logout(req.authToken);
+    const response: LogoutResponse = { success: true, message: null };
     return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
   } catch (error) {
-    const response: GetUserResponse = { success: false, message: (error as Error).message, user: null };
+    const response: LogoutResponse = { success: false, message: (error as Error).message };
     return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
   }
 };
