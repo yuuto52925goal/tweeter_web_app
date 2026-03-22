@@ -1,36 +1,39 @@
-import { AuthToken } from "tweeter-shared/dist/model/domain/AuthToken";
-import { Status } from "tweeter-shared/dist/model/domain/Status";
-import { FakeData } from "tweeter-shared/dist/util/FakeData";
+import { AuthToken, Status } from "tweeter-shared";
+import { ServerFacade } from "../network/ServerFacade";
 import { Service } from "./Service";
 
-export class StatusService implements Service{
-    public async loadMoreFeedItems(
-        authToken: AuthToken,
-        userAlias: string,
-        pageSize: number,
-        lastItem: Status | null
-    ): Promise<[Status[], boolean]> {
-        // TODO: Replace with the result of calling server
-        return FakeData.instance.getPageOfStatuses(lastItem, pageSize);
-    }
+export class StatusService implements Service {
+  private facade = new ServerFacade();
 
-    public async loadMoreStoryItems(
-        authToken: AuthToken,
-        userAlias: string,
-        pageSize: number,
-        lastItem: Status | null
-    ): Promise<[Status[], boolean]> {
-        // TODO: Replace with the result of calling server
-        return FakeData.instance.getPageOfStatuses(lastItem, pageSize);
-    }
+  public async loadMoreFeedItems(
+    authToken: AuthToken,
+    userAlias: string,
+    pageSize: number,
+    lastItem: Status | null
+  ): Promise<[Status[], boolean]> {
+    return this.facade.getMoreFeedItems({
+      authToken: authToken.toDto(),
+      userAlias,
+      pageSize,
+      lastItem: lastItem ? lastItem.toDto() : null,
+    });
+  }
 
-    public async postStatus(
-        authToken: AuthToken,
-        newStatus: Status
-    ): Promise<void> {
-        // Pause so we can see the posting status message. Remove when connected to the server
-        await new Promise((f) => setTimeout(f, 2000));
+  public async loadMoreStoryItems(
+    authToken: AuthToken,
+    userAlias: string,
+    pageSize: number,
+    lastItem: Status | null
+  ): Promise<[Status[], boolean]> {
+    return this.facade.getMoreStoryItems({
+      authToken: authToken.toDto(),
+      userAlias,
+      pageSize,
+      lastItem: lastItem ? lastItem.toDto() : null,
+    });
+  }
 
-        // TODO: Call the server to post the status
-    }
+  public async postStatus(authToken: AuthToken, newStatus: Status): Promise<void> {
+    return this.facade.postStatus(authToken, newStatus);
+  }
 }
