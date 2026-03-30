@@ -1,7 +1,8 @@
 import { LogoutRequest, LogoutResponse } from "tweeter-shared";
+import { getDAOFactory } from "../dao/DAOFactoryProvider";
 import { UserService } from "../service/UserService";
 
-const service = new UserService();
+const service = new UserService(getDAOFactory());
 
 export const handler = async (event: any): Promise<any> => {
   try {

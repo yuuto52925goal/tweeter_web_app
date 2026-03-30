@@ -1,7 +1,8 @@
 import { PagedStatusItemRequest, PagedStatusItemResponse } from "tweeter-shared";
+import { getDAOFactory } from "../dao/DAOFactoryProvider";
 import { StatusService } from "../service/StatusService";
 
-const service = new StatusService();
+const service = new StatusService(getDAOFactory());
 
 export const handler = async (event: any): Promise<any> => {
   try {

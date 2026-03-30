@@ -1,7 +1,8 @@
 import { FollowCountRequest, FollowCountResponse } from "tweeter-shared";
+import { getDAOFactory } from "../dao/DAOFactoryProvider";
 import { FollowService } from "../service/FollowService";
 
-const service = new FollowService();
+const service = new FollowService(getDAOFactory());
 
 export const handler = async (event: any): Promise<any> => {
   try {
