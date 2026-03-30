@@ -1,5 +1,7 @@
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as path from 'path';
 import * as cdk from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
@@ -26,10 +28,93 @@ export class TweeterCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // --- DynamoDB Tables ---
+    const userTable = new dynamodb.Table(this, 'UserTable', {
+      tableName: 'tweeter-users',
+      partitionKey: { name: 'alias', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+      readCapacity: 5,
+      writeCapacity: 5,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const authTokenTable = new dynamodb.Table(this, 'AuthTokenTable', {
+      tableName: 'tweeter-auth-tokens',
+      partitionKey: { name: 'token', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+      readCapacity: 5,
+      writeCapacity: 5,
+      timeToLiveAttribute: 'expiresAt',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Follow table: PK=followerAlias, SK=followeeAlias
+    // GSI: PK=followeeAlias, SK=followerAlias (look up who follows a given user)
+    const followTable = new dynamodb.Table(this, 'FollowTable', {
+      tableName: 'tweeter-follows',
+      partitionKey: { name: 'followerAlias', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'followeeAlias', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+      readCapacity: 5,
+      writeCapacity: 5,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+    followTable.addGlobalSecondaryIndex({
+      indexName: 'followee-index',
+      partitionKey: { name: 'followeeAlias', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'followerAlias', type: dynamodb.AttributeType.STRING },
+      readCapacity: 5,
+      writeCapacity: 5,
+    });
+
+    // Story table: PK=senderAlias, SK=timestamp (number, ms since epoch)
+    const statusTable = new dynamodb.Table(this, 'StatusTable', {
+      tableName: 'tweeter-story',
+      partitionKey: { name: 'senderAlias', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.NUMBER },
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+      readCapacity: 5,
+      writeCapacity: 5,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Feed table: PK=recipientAlias, SK=timestamp (number, ms since epoch)
+    const feedTable = new dynamodb.Table(this, 'FeedTable', {
+      tableName: 'tweeter-feed',
+      partitionKey: { name: 'recipientAlias', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.NUMBER },
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+      readCapacity: 5,
+      writeCapacity: 5,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // --- S3 Bucket for profile images (public read via ACLs) ---
+    const imageBucket = new s3.Bucket(this, 'ImageBucket', {
+      blockPublicAccess: new s3.BlockPublicAccess({
+        blockPublicAcls: false,
+        blockPublicPolicy: false,
+        ignorePublicAcls: false,
+        restrictPublicBuckets: false,
+      }),
+      objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
     const handlerDir = path.join(__dirname, '../resources/lambdaHandler');
     const commonProps = {
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_20_X,
+      environment: {
+        USER_TABLE: userTable.tableName,
+        AUTH_TOKEN_TABLE: authTokenTable.tableName,
+        FOLLOW_TABLE: followTable.tableName,
+        STATUS_TABLE: statusTable.tableName,
+        FEED_TABLE: feedTable.tableName,
+        IMAGE_BUCKET: imageBucket.bucketName,
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+      },
     };
 
     // --- Lambdas ---
@@ -47,6 +132,28 @@ export class TweeterCdkStack extends cdk.Stack {
     const getFeedLambda = new NodejsFunction(this, 'GetFeedFunction', { ...commonProps, entry: path.join(handlerDir, 'GetFeedHandler.ts') });
     const getStoryLambda = new NodejsFunction(this, 'GetStoryFunction', { ...commonProps, entry: path.join(handlerDir, 'GetStoryHandler.ts') });
     const postStatusLambda = new NodejsFunction(this, 'PostStatusFunction', { ...commonProps, entry: path.join(handlerDir, 'PostStatusHandler.ts') });
+
+    // --- Grant DynamoDB + S3 permissions to all lambdas ---
+    const allLambdas = [
+      loginLambda, registerLambda, logoutLambda, getUserLambda,
+      getFollowersLambda, getFolloweesLambda, isFollowerStatusLambda,
+      getFollowerCountLambda, getFolloweeCountLambda,
+      followLambda, unfollowLambda,
+      getFeedLambda, getStoryLambda, postStatusLambda,
+    ];
+    for (const fn of allLambdas) {
+      userTable.grantReadWriteData(fn);
+      authTokenTable.grantReadWriteData(fn);
+      followTable.grantReadWriteData(fn);
+      statusTable.grantReadWriteData(fn);
+      feedTable.grantReadWriteData(fn);
+      imageBucket.grantReadWrite(fn);
+    }
+
+    new cdk.CfnOutput(this, 'ImageBucketName', {
+      value: imageBucket.bucketName,
+      description: 'S3 bucket for Tweeter profile images',
+    });
 
     // --- API Gateway ---
     this.api = new RestApi(this, 'TweeterApi', {
