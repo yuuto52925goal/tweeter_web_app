@@ -5,12 +5,21 @@ import { ServerFacade } from "../../src/network/ServerFacade";
 const facade = new ServerFacade();
 
 describe("ServerFacade integration tests", () => {
+  // Login once to get a real DynamoDB-backed token for all protected endpoints
+  let authToken: AuthToken;
+  beforeAll(async () => {
+    const [, token] = await facade.login("@allen", "password");
+    authToken = token;
+  });
+
   describe("register", () => {
     it("returns a valid user and authToken", async () => {
-      const [user, authToken] = await facade.register(
+      // Use a unique alias so re-runs don't fail with "alias already taken"
+      const alias = `@testuser${Date.now()}`;
+      const [user, token] = await facade.register(
         "John",
         "Doe",
-        "@jdoe",
+        alias,
         "password",
         "",
         "png"
@@ -19,14 +28,13 @@ describe("ServerFacade integration tests", () => {
       expect(user).toBeInstanceOf(User);
       expect(user.firstName).toBeTruthy();
       expect(user.alias).toBeTruthy();
-      expect(authToken).toBeInstanceOf(AuthToken);
-      expect(authToken.token).toBeTruthy();
+      expect(token).toBeInstanceOf(AuthToken);
+      expect(token.token).toBeTruthy();
     });
   });
 
   describe("getMoreFollowers", () => {
     it("returns a page of followers and a hasMore flag", async () => {
-      const authToken = AuthToken.Generate();
       const [followers, hasMore] = await facade.getMoreFollowers({
         authToken: authToken.toDto(),
         userAlias: "@allen",
@@ -41,7 +49,6 @@ describe("ServerFacade integration tests", () => {
     });
 
     it("paginates correctly with a lastItem", async () => {
-      const authToken = AuthToken.Generate();
       const [firstPage] = await facade.getMoreFollowers({
         authToken: authToken.toDto(),
         userAlias: "@allen",
@@ -63,7 +70,6 @@ describe("ServerFacade integration tests", () => {
 
   describe("getFollowerCount and getFolloweeCount", () => {
     it("returns a positive follower count", async () => {
-      const authToken = AuthToken.Generate();
       const user = new User("Allen", "Anderson", "@allen", "");
       const count = await facade.getFollowerCount(authToken, user);
 
@@ -72,7 +78,6 @@ describe("ServerFacade integration tests", () => {
     });
 
     it("returns a positive followee count", async () => {
-      const authToken = AuthToken.Generate();
       const user = new User("Allen", "Anderson", "@allen", "");
       const count = await facade.getFolloweeCount(authToken, user);
 

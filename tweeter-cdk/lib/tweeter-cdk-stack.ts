@@ -107,6 +107,8 @@ export class TweeterCdkStack extends cdk.Stack {
     const commonProps = {
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_20_X,
+      timeout: cdk.Duration.seconds(15),
+      memorySize: 256,
       environment: {
         USER_TABLE: userTable.tableName,
         AUTH_TOKEN_TABLE: authTokenTable.tableName,

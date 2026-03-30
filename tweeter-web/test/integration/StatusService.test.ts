@@ -1,14 +1,20 @@
 import "isomorphic-fetch";
 import { AuthToken, Status } from "tweeter-shared";
+import { ServerFacade } from "../../src/network/ServerFacade";
 import { StatusService } from "../../src/model.service/StatusService";
 
+const facade = new ServerFacade();
 const service = new StatusService();
 
 describe("StatusService integration tests", () => {
+  let authToken: AuthToken;
+  beforeAll(async () => {
+    const [, token] = await facade.login("@allen", "password");
+    authToken = token;
+  });
+
   describe("loadMoreStoryItems", () => {
     it("returns a non-empty page of statuses with a hasMore flag", async () => {
-      const authToken = AuthToken.Generate();
-
       const [items, hasMore] = await service.loadMoreStoryItems(
         authToken,
         "@allen",
