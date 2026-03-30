@@ -165,6 +165,21 @@ export class TweeterCdkStack extends cdk.Stack {
       },
     });
 
+    // Ensure CORS headers appear on API Gateway-level errors (throttling, bad request body, etc.)
+    // Without these, browser preflight errors are swallowed with no CORS header.
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': "'*'",
+      'Access-Control-Allow-Headers': "'Content-Type,Authorization'",
+    };
+    this.api.addGatewayResponse('GatewayResponse4xx', {
+      type: apigateway.ResponseType.DEFAULT_4XX,
+      responseHeaders: corsHeaders,
+    });
+    this.api.addGatewayResponse('GatewayResponse5xx', {
+      type: apigateway.ResponseType.DEFAULT_5XX,
+      responseHeaders: corsHeaders,
+    });
+
     // /user
     const userResource = this.api.root.addResource('user');
     this.addMethod(userResource.addResource('login'), loginLambda, '/user/login',
