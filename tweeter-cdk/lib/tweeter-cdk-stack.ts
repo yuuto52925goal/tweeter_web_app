@@ -1,6 +1,7 @@
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as path from 'path';
 import * as cdk from 'aws-cdk-lib/core';
@@ -113,7 +114,6 @@ export class TweeterCdkStack extends cdk.Stack {
         STATUS_TABLE: statusTable.tableName,
         FEED_TABLE: feedTable.tableName,
         IMAGE_BUCKET: imageBucket.bucketName,
-        AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
       },
     };
 
@@ -148,6 +148,11 @@ export class TweeterCdkStack extends cdk.Stack {
       statusTable.grantReadWriteData(fn);
       feedTable.grantReadWriteData(fn);
       imageBucket.grantReadWrite(fn);
+      // grantReadWrite does not include PutObjectAcl — add it explicitly
+      fn.addToRolePolicy(new iam.PolicyStatement({
+        actions: ['s3:PutObjectAcl'],
+        resources: [imageBucket.arnForObjects('*')],
+      }));
     }
 
     new cdk.CfnOutput(this, 'ImageBucketName', {

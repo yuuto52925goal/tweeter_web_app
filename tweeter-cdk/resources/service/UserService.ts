@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import * as bcrypt from "bcryptjs";
 import { AuthToken, AuthTokenDto, UserDto } from "tweeter-shared";
 import { DAOFactory } from "../dao/DAOFactory";
 import { IAuthTokenDAO } from "../dao/IAuthTokenDAO";
