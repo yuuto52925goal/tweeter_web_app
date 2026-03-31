@@ -62,7 +62,11 @@ export class DynamoDBUserDAO extends DynamoDBDAOBase implements IUserDAO {
       const items = result.Responses?.[TABLE] ?? [];
       users.push(...items.map((item) => this.toDto(item)));
     }
-    return users;
+
+    // BatchGetItem returns items in unspecified order.
+    // Restore the original alias order so the pagination cursor stays correct.
+    const byAlias = new Map(users.map((u) => [u.alias, u]));
+    return aliases.map((a) => byAlias.get(a)).filter((u): u is UserDto => u !== undefined);
   }
 
   private toDto(item: Record<string, any>): UserDto {
