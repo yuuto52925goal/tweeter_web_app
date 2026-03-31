@@ -1,27 +1,20 @@
 import { GetUserRequest, GetUserResponse } from "tweeter-shared";
 import { getDAOFactory } from "../dao/DAOFactoryProvider";
 import { UserService } from "../service/UserService";
+import { makeHandler } from "./HandlerUtils";
 
 const service = new UserService(getDAOFactory());
+const err = (message: string): GetUserResponse => ({ success: false, message, user: null });
 
-export const handler = async (event: any): Promise<any> => {
-  try {
-    const req: GetUserRequest = JSON.parse(event.body);
-
-    if (!req.authToken) {
-      const response: GetUserResponse = { success: false, message: "Auth token is required", user: null };
-      return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
-    }
-    if (!req.alias || req.alias.trim() === "") {
-      const response: GetUserResponse = { success: false, message: "Alias is required", user: null };
-      return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
-    }
-
+export const handler = makeHandler<GetUserRequest, GetUserResponse>(
+  err,
+  (req) => {
+    if (!req.authToken) return "Auth token is required";
+    if (!req.alias?.trim()) return "Alias is required";
+    return null;
+  },
+  async (req) => {
     const user = await service.getUser(req.authToken, req.alias);
-    const response: GetUserResponse = { success: true, message: null, user };
-    return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
-  } catch (error) {
-    const response: GetUserResponse = { success: false, message: (error as Error).message, user: null };
-    return { statusCode: 500, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
+    return { success: true, message: null, user };
   }
-};
+);

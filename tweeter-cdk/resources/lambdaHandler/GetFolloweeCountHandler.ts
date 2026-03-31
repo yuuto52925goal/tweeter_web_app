@@ -1,27 +1,20 @@
 import { FollowCountRequest, FollowCountResponse } from "tweeter-shared";
 import { getDAOFactory } from "../dao/DAOFactoryProvider";
 import { FollowService } from "../service/FollowService";
+import { makeHandler } from "./HandlerUtils";
 
 const service = new FollowService(getDAOFactory());
+const err = (message: string): FollowCountResponse => ({ success: false, message, count: 0 });
 
-export const handler = async (event: any): Promise<any> => {
-  try {
-    const req: FollowCountRequest = JSON.parse(event.body);
-
-    if (!req.authToken) {
-      const response: FollowCountResponse = { success: false, message: "Auth token is required", count: 0 };
-      return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
-    }
-    if (!req.targetUser) {
-      const response: FollowCountResponse = { success: false, message: "Target user is required", count: 0 };
-      return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
-    }
-
+export const handler = makeHandler<FollowCountRequest, FollowCountResponse>(
+  err,
+  (req) => {
+    if (!req.authToken) return "Auth token is required";
+    if (!req.targetUser) return "Target user is required";
+    return null;
+  },
+  async (req) => {
     const count = await service.getFolloweeCount(req.authToken, req.targetUser);
-    const response: FollowCountResponse = { success: true, message: null, count };
-    return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
-  } catch (error) {
-    const response: FollowCountResponse = { success: false, message: (error as Error).message, count: 0 };
-    return { statusCode: 500, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
+    return { success: true, message: null, count };
   }
-};
+);

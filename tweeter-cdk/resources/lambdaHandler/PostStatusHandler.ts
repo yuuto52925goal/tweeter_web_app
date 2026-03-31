@@ -1,31 +1,21 @@
 import { PostStatusRequest, PostStatusResponse } from "tweeter-shared";
 import { getDAOFactory } from "../dao/DAOFactoryProvider";
 import { StatusService } from "../service/StatusService";
+import { makeHandler } from "./HandlerUtils";
 
 const service = new StatusService(getDAOFactory());
+const err = (message: string): PostStatusResponse => ({ success: false, message });
 
-export const handler = async (event: any): Promise<any> => {
-  try {
-    const req: PostStatusRequest = JSON.parse(event.body);
-
-    if (!req.authToken) {
-      const response: PostStatusResponse = { success: false, message: "Auth token is required" };
-      return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
-    }
-    if (!req.newStatus) {
-      const response: PostStatusResponse = { success: false, message: "Status is required" };
-      return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
-    }
-    if (!req.newStatus.post || req.newStatus.post.trim() === "") {
-      const response: PostStatusResponse = { success: false, message: "Status post content is required" };
-      return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
-    }
-
+export const handler = makeHandler<PostStatusRequest, PostStatusResponse>(
+  err,
+  (req) => {
+    if (!req.authToken) return "Auth token is required";
+    if (!req.newStatus) return "Status is required";
+    if (!req.newStatus.post?.trim()) return "Status post content is required";
+    return null;
+  },
+  async (req) => {
     await service.postStatus(req.authToken, req.newStatus);
-    const response: PostStatusResponse = { success: true, message: null };
-    return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
-  } catch (error) {
-    const response: PostStatusResponse = { success: false, message: (error as Error).message };
-    return { statusCode: 500, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(response) };
+    return { success: true, message: null };
   }
-};
+);
