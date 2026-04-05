@@ -6,6 +6,7 @@ import { PostStatusPresenter, PostStatusView } from "../../presenter/PostStatusP
 
 interface Props {
   presenter?: PostStatusPresenter;
+  onStatusPosted?: () => void;
 }
 
 const PostStatus = (props: Props) => {
@@ -21,6 +22,7 @@ const PostStatus = (props: Props) => {
     displayErrorMessage: displayErrorMessage,
     deleteMessage: deleteMessage,
     setPost: setPost,
+    onStatusPosted: props.onStatusPosted,
   };
 
   const presenter = useRef<PostStatusPresenter | null>(null);

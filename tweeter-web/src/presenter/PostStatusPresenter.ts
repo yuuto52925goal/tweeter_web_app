@@ -7,6 +7,7 @@ import { MessageView, Presenter } from "./Presenter";
 export interface PostStatusView extends MessageView {
   setIsLoading: (isLoading: boolean) => void;
   setPost: (post: string) => void;
+  onStatusPosted?: () => void;
 }
 
 export class PostStatusPresenter extends Presenter<PostStatusView> {
@@ -33,6 +34,7 @@ export class PostStatusPresenter extends Presenter<PostStatusView> {
       await this.service.postStatus(authToken, status);
       this.view.setPost("");
       this.view.displayInfoMessage("Successfully Posted!", 2000);
+      this.view.onStatusPosted?.();
     }, "post the status", () => {
       this.view.deleteMessage(postingStatusToastId);
       this.view.setIsLoading(false);

@@ -1,10 +1,13 @@
 import "./MainLayout.css";
+import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import AppNavbar from "../appNavbar/AppNavbar";
 import PostStatus from "../postStatus/PostStatus";
 import UserInfo from "../userInfo/UserInfoComponent";
 
 const MainLayout = () => {
+  const [statusPostedAt, setStatusPostedAt] = useState(0);
+
   return (
     <>
       <AppNavbar />
@@ -16,13 +19,13 @@ const MainLayout = () => {
                 <UserInfo />
               </div>
               <div className="p-3 border mt-1 rounded bg-light">
-                <PostStatus />
+                <PostStatus onStatusPosted={() => setStatusPostedAt(Date.now())} />
               </div>
             </div>
           </div>
           <div className="col-8 px-0">
             <div className="bg-white ms-4 w-100">
-              <Outlet />
+              <Outlet context={statusPostedAt} />
             </div>
           </div>
         </div>

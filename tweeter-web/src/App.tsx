@@ -6,6 +6,7 @@ import {
   Route,
   Routes,
   useLocation,
+  useOutletContext,
 } from "react-router-dom";
 import Login from "./components/authentication/login/Login";
 import Register from "./components/authentication/register/Register";
@@ -45,6 +46,21 @@ const App = () => {
   );
 };
 
+// Reads the statusPostedAt value passed by MainLayout via Outlet context and
+// remounts the story ItemScroller when a new post is made (key changes → reload).
+const StoryRoute = () => {
+  const statusPostedAt = useOutletContext<number>();
+  const { displayedUser } = useUserInfo();
+  return (
+    <ItemScroller<Status, StatusService>
+      key={`story-${displayedUser!.alias}-${statusPostedAt}`}
+      itemDescription="story"
+      presenterFactory={(view) => new StoryPresenter(view)}
+      renderItem={(item: Status) => <StatusItem item={item} featurePath="/story" />}
+    />
+  );
+};
+
 const AuthenticatedRoutes = () => {
   const { displayedUser } = useUserInfo();
 
@@ -75,14 +91,7 @@ const AuthenticatedRoutes = () => {
         />
         <Route
           path="story/:displayedUser"
-          element={
-            <ItemScroller<Status, StatusService>
-              key={`story-${displayedUser!.alias}`}
-              itemDescription="story"
-              presenterFactory={(view) => new StoryPresenter(view)}
-              renderItem={(item: Status) => renderStatusItem(item, '/story')}
-            />
-          }
+          element={<StoryRoute />}
         />
         <Route
           path="followees/:displayedUser"
