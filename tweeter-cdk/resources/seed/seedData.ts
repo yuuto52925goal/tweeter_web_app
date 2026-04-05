@@ -7,14 +7,17 @@
  *
  * Requires AWS credentials with DynamoDB write access (same profile used for cdk deploy).
  *
+ * IMPORTANT: Before running, temporarily increase WCU on tweeter-users and tweeter-follows
+ * tables to 200 (to speed up writes). After seeding is complete, reduce back to 5.
+ *
  * What gets created:
- *   - 16 users  (@allen + 15 others), all with password "password"
- *   - @allen follows all 15 others  → followees tab has 15 items
- *   - All 15 others follow @allen   → followers tab has 15 items
- *   - @allen posts 15 statuses      → @allen's story tab has 15 items
- *   - Each of the 15 others posts 3 statuses that fan-out to @allen's feed
- *                                   → @allen's feed tab has 45 items
- *   - Each of the 15 others gets @allen's 15 posts in their feed
+ *   - @allen + 15 named users (existing test users, password = "password")
+ *   - 10,000 generated users @user00001–@user10000 (password = "password")
+ *   - All 10,000 generated users follow @allen → @allen has 10,015+ followers
+ *   - @allen follows the 15 named users
+ *   - @allen posts 15 statuses (story)
+ *   - The 15 named others each post 3 statuses (story + @allen's feed)
+ *   - All other users get @allen's 15 posts in their feed
  */
 
 import bcrypt from "bcryptjs";
@@ -36,6 +39,9 @@ const FEED_TABLE = "tweeter-feed";
 const PASSWORD = "password";
 const SALT_ROUNDS = 10;
 const IMAGE_BASE = "https://robohash.org";
+
+// Number of generated bulk users (must be ≥ 10,000 for pass-off)
+const BULK_USER_COUNT = 10_000;
 // ─────────────────────────────────────────────────────────────────────────────
 
 const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: REGION }), {
@@ -67,7 +73,7 @@ const OTHER_USERS: SeedUser[] = [
 ];
 
 const ALLEN: SeedUser = { alias: "@allen", firstName: "Allen", lastName: "Anderson" };
-const ALL_USERS = [ALLEN, ...OTHER_USERS];
+const NAMED_USERS = [ALLEN, ...OTHER_USERS];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -95,11 +101,15 @@ function timestamps(count: number, baseOffset = 0): number[] {
   return Array.from({ length: count }, (_, i) => base - i * 60_000);
 }
 
+function makeBulkAlias(n: number): string {
+  return `@user${String(n).padStart(5, "0")}`;
+}
+
 // ─── Seed Steps ──────────────────────────────────────────────────────────────
 
-async function seedUsers(passwordHash: string) {
-  console.log("Seeding users…");
-  for (const u of ALL_USERS) {
+async function seedNamedUsers(passwordHash: string) {
+  console.log(`Seeding ${NAMED_USERS.length} named users…`);
+  for (const u of NAMED_USERS) {
     await docClient.send(
       new PutCommand({
         TableName: USER_TABLE,
@@ -115,8 +125,30 @@ async function seedUsers(passwordHash: string) {
   }
 }
 
-async function seedFollows() {
-  console.log("Seeding follow relationships…");
+async function seedBulkUsers(passwordHash: string) {
+  console.log(`Seeding ${BULK_USER_COUNT} bulk users (@user00001–@user${String(BULK_USER_COUNT).padStart(5, "0")})…`);
+  // All bulk users share the same profile image to keep things simple
+  const sharedImageUrl = `${IMAGE_BASE}/bulk-user.png`;
+
+  const items: Record<string, any>[] = [];
+  for (let n = 1; n <= BULK_USER_COUNT; n++) {
+    const alias = makeBulkAlias(n);
+    items.push({
+      alias,
+      firstName: `User`,
+      lastName: `${n}`,
+      imageUrl: sharedImageUrl,
+      passwordHash,
+    });
+  }
+
+  console.log("  Writing bulk users in batches of 25…");
+  await batchWrite(USER_TABLE, items);
+  console.log("  Bulk users written.");
+}
+
+async function seedNamedFollows() {
+  console.log("Seeding named-user follow relationships…");
   const items: Record<string, any>[] = [];
 
   for (const other of OTHER_USERS) {
@@ -127,6 +159,19 @@ async function seedFollows() {
   }
 
   await batchWrite(FOLLOW_TABLE, items);
+}
+
+async function seedBulkFollows() {
+  console.log(`Seeding ${BULK_USER_COUNT} bulk-user follows → @allen…`);
+  const items: Record<string, any>[] = [];
+
+  for (let n = 1; n <= BULK_USER_COUNT; n++) {
+    items.push({ followerAlias: makeBulkAlias(n), followeeAlias: ALLEN.alias });
+  }
+
+  console.log("  Writing bulk follows in batches of 25…");
+  await batchWrite(FOLLOW_TABLE, items);
+  console.log(`  Done. @allen now has ${BULK_USER_COUNT + OTHER_USERS.length} followers.`);
 }
 
 async function seedAllenStory(): Promise<{ timestamp: number; post: string }[]> {
@@ -154,7 +199,6 @@ async function seedOtherStories(): Promise<
 
   for (let idx = 0; idx < OTHER_USERS.length; idx++) {
     const u = OTHER_USERS[idx];
-    // offset each user's posts so timestamps don't collide
     const ts = timestamps(3, (idx + 1) * 200_000);
     for (let j = 0; j < 3; j++) {
       const post = `Hello from ${u.firstName}! Post #${j + 1} — loving Tweeter! #hello`;
@@ -197,7 +241,7 @@ async function seedAllenFeed(
 async function seedOtherFeeds(
   allenPosts: { timestamp: number; post: string }[]
 ) {
-  console.log("Seeding other users' feeds (@allen's posts)…");
+  console.log("Seeding named users' feeds (@allen's posts)…");
   const items: Record<string, any>[] = [];
 
   for (const u of OTHER_USERS) {
@@ -221,19 +265,29 @@ async function seedOtherFeeds(
 
 async function main() {
   console.log(`Connecting to DynamoDB in ${REGION}…\n`);
+  console.log("NOTE: Make sure you have temporarily set WCU to 200 on");
+  console.log("      tweeter-users and tweeter-follows before running this script.\n");
+
   const passwordHash = await bcrypt.hash(PASSWORD, SALT_ROUNDS);
 
-  await seedUsers(passwordHash);
-  await seedFollows();
+  await seedNamedUsers(passwordHash);
+  await seedBulkUsers(passwordHash);
+  await seedNamedFollows();
+  await seedBulkFollows();
   const allenPosts = await seedAllenStory();
   const otherPosts = await seedOtherStories();
   await seedAllenFeed(otherPosts);
   await seedOtherFeeds(allenPosts);
 
-  console.log("\nDone! Test credentials:");
+  console.log("\n✅ Done! Summary:");
+  console.log(`  Named users:   ${NAMED_USERS.length}  (all use password: "password")`);
+  console.log(`  Bulk users:    ${BULK_USER_COUNT}  (@user00001–@user${String(BULK_USER_COUNT).padStart(5, "0")})`);
+  console.log(`  @allen followers: ${BULK_USER_COUNT + OTHER_USERS.length}`);
+  console.log("\nTest credentials:");
   console.log("  alias: @allen   password: password");
   console.log("  alias: @amy     password: password");
-  console.log("  (all 16 users share the same password)");
+  console.log("  (all named users share the same password)");
+  console.log("\nRemember to reduce WCU back to 5 on users and follows tables!");
 }
 
 main().catch((err) => {
