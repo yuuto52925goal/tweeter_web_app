@@ -5,7 +5,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMessageActions } from "../toaster/MessageHooks";
 import { UserInfoPresenter, UserInfoView } from "../../presenter/UserInfoPresenter";
 
-const UserInfo = () => {
+interface Props {
+  onFollowChanged?: () => void;
+}
+
+const UserInfo = ({ onFollowChanged }: Props) => {
   const [isFollower, setIsFollower] = useState(false);
   const [followeeCount, setFolloweeCount] = useState(-1);
   const [followerCount, setFollowerCount] = useState(-1);
@@ -26,6 +30,7 @@ const UserInfo = () => {
     displayErrorMessage: displayErrorMessage,
     displayInfoMessage: displayInfoMessage,
     deleteMessage: deleteMessage,
+    onFollowChanged: onFollowChanged,
   };
 
   const presenter = useRef<UserInfoPresenter | null>(null);

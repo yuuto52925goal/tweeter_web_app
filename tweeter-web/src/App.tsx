@@ -10,7 +10,7 @@ import {
 } from "react-router-dom";
 import Login from "./components/authentication/login/Login";
 import Register from "./components/authentication/register/Register";
-import MainLayout from "./components/mainLayout/MainLayout";
+import MainLayout, { MainLayoutContext } from "./components/mainLayout/MainLayout";
 import Toaster from "./components/toaster/Toaster";
 import ItemScroller from "./components/mainLayout/ItemScroller";
 import StatusItem from "./components/statusItem/StatusItem";
@@ -31,7 +31,6 @@ const App = () => {
     return !!currentUser && !!authToken;
   };
 
-
   return (
     <div>
       <Toaster position="top-right" />
@@ -46,10 +45,11 @@ const App = () => {
   );
 };
 
-// Reads the statusPostedAt value passed by MainLayout via Outlet context and
-// remounts the story ItemScroller when a new post is made (key changes → reload).
+// Route wrappers that read MainLayout's Outlet context and include the
+// relevant counter in the ItemScroller key so it remounts on change.
+
 const StoryRoute = () => {
-  const statusPostedAt = useOutletContext<number>();
+  const { statusPostedAt } = useOutletContext<MainLayoutContext>();
   const { displayedUser } = useUserInfo();
   return (
     <ItemScroller<Status, StatusService>
@@ -61,18 +61,46 @@ const StoryRoute = () => {
   );
 };
 
+const FollowersRoute = () => {
+  const { followChangedAt } = useOutletContext<MainLayoutContext>();
+  const { displayedUser } = useUserInfo();
+  return (
+    <ItemScroller<User, FollowService>
+      key={`followers-${displayedUser!.alias}-${followChangedAt}`}
+      itemDescription="followers"
+      presenterFactory={(view) => new FollowerPresenter(view)}
+      renderItem={(item: User) => (
+        <div className="row mb-3 mx-0 px-0 border rounded bg-white">
+          <UserItem user={item} featurePath="/followers" />
+        </div>
+      )}
+    />
+  );
+};
+
+const FolloweesRoute = () => {
+  const { followChangedAt } = useOutletContext<MainLayoutContext>();
+  const { displayedUser } = useUserInfo();
+  return (
+    <ItemScroller<User, FollowService>
+      key={`followees-${displayedUser!.alias}-${followChangedAt}`}
+      itemDescription="followees"
+      presenterFactory={(view) => new FolloweePresenter(view)}
+      renderItem={(item: User) => (
+        <div className="row mb-3 mx-0 px-0 border rounded bg-white">
+          <UserItem user={item} featurePath="/followees" />
+        </div>
+      )}
+    />
+  );
+};
+
 const AuthenticatedRoutes = () => {
   const { displayedUser } = useUserInfo();
 
   const renderStatusItem = (item: Status, path: string) => (
-      <StatusItem item={item} featurePath={path} />
-  )
-
-  const renderUserItem = (item: User, path: string) => (
-    <div className="row mb-3 mx-0 px-0 border rounded bg-white">
-      <UserItem user={item} featurePath={path} />
-    </div>
-  )
+    <StatusItem item={item} featurePath={path} />
+  );
 
   return (
     <Routes>
@@ -89,32 +117,9 @@ const AuthenticatedRoutes = () => {
             />
           }
         />
-        <Route
-          path="story/:displayedUser"
-          element={<StoryRoute />}
-        />
-        <Route
-          path="followees/:displayedUser"
-          element={
-            <ItemScroller<User, FollowService>
-              key={`followees-${displayedUser!.alias}`}
-              itemDescription="followees"
-              presenterFactory={(view) => new FolloweePresenter(view)}
-              renderItem={(item: User) => renderUserItem(item, "/followees")}
-            />
-          }
-        />
-        <Route
-          path="followers/:displayedUser"
-          element={
-            <ItemScroller<User, FollowService>
-              key={`followers-${displayedUser!.alias}`}
-              itemDescription="followers"
-              presenterFactory={(view) => new FollowerPresenter(view)}
-              renderItem={(item: User) => renderUserItem(item, "/followers")}
-            />
-          }
-        />
+        <Route path="story/:displayedUser" element={<StoryRoute />} />
+        <Route path="followees/:displayedUser" element={<FolloweesRoute />} />
+        <Route path="followers/:displayedUser" element={<FollowersRoute />} />
         <Route path="logout" element={<Navigate to="/login" />} />
         <Route path="*" element={<Navigate to={`/feed/${displayedUser!.alias}`} />} />
       </Route>

@@ -8,6 +8,7 @@ export interface UserInfoView extends MessageView{
   setFolloweeCount: (count: number) => void;
   setFollowerCount: (count: number) => void;
   setIsLoading: (isLoading: boolean) => void;
+  onFollowChanged?: () => void;
 }
 
 export class UserInfoPresenter extends Presenter<UserInfoView>{
@@ -74,6 +75,7 @@ export class UserInfoPresenter extends Presenter<UserInfoView>{
       this.view.setFollowerCount(followerCount);
       this.view.setFolloweeCount(followeeCount);
       this.view.deleteMessage(followingUserToast);
+      this.view.onFollowChanged?.();
     }, "follow user", () => this.view.setIsLoading(false))
   }
 
@@ -95,6 +97,7 @@ export class UserInfoPresenter extends Presenter<UserInfoView>{
       this.view.setFollowerCount(followerCount);
       this.view.setFolloweeCount(followeeCount);
       this.view.deleteMessage(unfollowingUserToast);
+      this.view.onFollowChanged?.();
     }, "unfollow user", () => this.view.setIsLoading(false))
   }
 }
