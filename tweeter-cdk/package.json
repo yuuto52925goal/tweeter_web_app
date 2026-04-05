@@ -13,6 +13,7 @@
     "seed": "ts-node resources/seed/seedData.ts"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.161",
     "@types/jest": "^29.5.14",
     "@types/node": "^24.10.1",
     "aws-cdk": "2.1033.0",
@@ -24,6 +25,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1020.0",
     "@aws-sdk/client-s3": "^3.1020.0",
+    "@aws-sdk/client-sqs": "^3.1024.0",
     "@aws-sdk/lib-dynamodb": "^3.1020.0",
     "@types/bcryptjs": "^2.4.6",
     "aws-cdk-lib": "2.215.0",
