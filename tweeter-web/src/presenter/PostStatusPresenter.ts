@@ -32,7 +32,7 @@ export class PostStatusPresenter extends Presenter<PostStatusView> {
       const status = new Status(post, currentUser, Date.now());
       await this.service.postStatus(authToken, status);
       this.view.setPost("");
-      this.view.displayInfoMessage("Status posted!", 2000);
+      this.view.displayInfoMessage("Successfully Posted!", 2000);
     }, "post the status", () => {
       this.view.deleteMessage(postingStatusToastId);
       this.view.setIsLoading(false);

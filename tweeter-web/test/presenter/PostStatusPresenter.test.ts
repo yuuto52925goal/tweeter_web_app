@@ -41,7 +41,7 @@ describe("PostStatusPresenter", () => {
     await postStatusPresenter.submitPost(authToken, post, currentUser);
     verify(mockPostStatusView.deleteMessage("postingToastId")).once();
     verify(mockPostStatusView.setPost("")).once();
-    verify(mockPostStatusView.displayInfoMessage("Status posted!", 2000)).once();
+    verify(mockPostStatusView.displayInfoMessage("Successfully Posted!", 2000)).once();
     verify(mockPostStatusView.displayErrorMessage(anything())).never();
   });
 
@@ -52,6 +52,6 @@ describe("PostStatusPresenter", () => {
     verify(mockPostStatusView.displayErrorMessage("Failed to perform post the status because of exception: Error: An error occurred")).once();
     verify(mockPostStatusView.deleteMessage("postingToastId")).once();
     verify(mockPostStatusView.setPost(anything())).never();
-    verify(mockPostStatusView.displayInfoMessage("Status posted!", 2000)).never();
+    verify(mockPostStatusView.displayInfoMessage("Successfully Posted!", 2000)).never();
   });
 });
