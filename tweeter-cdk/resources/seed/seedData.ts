@@ -77,17 +77,46 @@ const NAMED_USERS = [ALLEN, ...OTHER_USERS];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
 async function batchWrite(tableName: string, items: Record<string, any>[]) {
   const CHUNK = 25;
   for (let i = 0; i < items.length; i += CHUNK) {
     const chunk = items.slice(i, i + CHUNK);
-    await docClient.send(
-      new BatchWriteCommand({
-        RequestItems: {
-          [tableName]: chunk.map((Item) => ({ PutRequest: { Item } })),
-        },
-      })
-    );
+    let unprocessed = chunk.map((Item) => ({ PutRequest: { Item } }));
+    let delay = 1000; // ms — starting back-off
+
+    while (unprocessed.length > 0) {
+      try {
+        const result = await docClient.send(
+          new BatchWriteCommand({
+            RequestItems: { [tableName]: unprocessed },
+          })
+        );
+        // Retry items DynamoDB returned as unprocessed
+        unprocessed = (result.UnprocessedItems?.[tableName] ?? []) as typeof unprocessed;
+        if (unprocessed.length > 0) {
+          await sleep(delay);
+          delay = Math.min(delay * 2, 10_000);
+        }
+      } catch (err: any) {
+        // Retry on throttle exceptions (SDK exhausted its own retries)
+        if (err.__type?.includes("ProvisionedThroughputExceeded") ||
+            err.name === "ProvisionedThroughputExceededException") {
+          console.warn(`    Throttled on ${tableName}, waiting ${delay}ms…`);
+          await sleep(delay);
+          delay = Math.min(delay * 2, 10_000);
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    // Pause between batches
+    await sleep(100);
+    if (i % 500 === 0 && i > 0) {
+      console.log(`    …${i} / ${items.length} written`);
+    }
   }
 }
 
