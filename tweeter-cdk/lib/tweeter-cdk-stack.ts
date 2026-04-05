@@ -3,6 +3,8 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as path from 'path';
 import * as cdk from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
@@ -80,6 +82,7 @@ export class TweeterCdkStack extends cdk.Stack {
     });
 
     // Feed table: PK=recipientAlias, SK=timestamp (number, ms since epoch)
+    // WCU capped at 100 per requirements
     const feedTable = new dynamodb.Table(this, 'FeedTable', {
       tableName: 'tweeter-feed',
       partitionKey: { name: 'recipientAlias', type: dynamodb.AttributeType.STRING },
@@ -103,6 +106,21 @@ export class TweeterCdkStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
+    // --- SQS Queues for async feed fan-out ---
+    // Queue 1: receives one message per postStatus call
+    const postStatusQueue = new sqs.Queue(this, 'PostStatusQueue', {
+      queueName: 'tweeter-post-status',
+      visibilityTimeout: cdk.Duration.seconds(60),
+      retentionPeriod: cdk.Duration.days(1),
+    });
+
+    // Queue 2: receives one message per batch of 100 followers
+    const updateFeedQueue = new sqs.Queue(this, 'UpdateFeedQueue', {
+      queueName: 'tweeter-update-feed',
+      visibilityTimeout: cdk.Duration.seconds(60),
+      retentionPeriod: cdk.Duration.days(1),
+    });
+
     const handlerDir = path.join(__dirname, '../resources/lambdaHandler');
     const commonProps = {
       handler: 'handler',
@@ -116,10 +134,11 @@ export class TweeterCdkStack extends cdk.Stack {
         STATUS_TABLE: statusTable.tableName,
         FEED_TABLE: feedTable.tableName,
         IMAGE_BUCKET: imageBucket.bucketName,
+        POST_STATUS_QUEUE_URL: postStatusQueue.queueUrl,
       },
     };
 
-    // --- Lambdas ---
+    // --- API-facing Lambdas ---
     const loginLambda = new NodejsFunction(this, 'LoginFunction', { ...commonProps, entry: path.join(handlerDir, 'LoginHandler.ts') });
     const registerLambda = new NodejsFunction(this, 'RegisterFunction', { ...commonProps, entry: path.join(handlerDir, 'RegisterHandler.ts') });
     const logoutLambda = new NodejsFunction(this, 'LogoutFunction', { ...commonProps, entry: path.join(handlerDir, 'LogoutHandler.ts') });
@@ -135,31 +154,84 @@ export class TweeterCdkStack extends cdk.Stack {
     const getStoryLambda = new NodejsFunction(this, 'GetStoryFunction', { ...commonProps, entry: path.join(handlerDir, 'GetStoryHandler.ts') });
     const postStatusLambda = new NodejsFunction(this, 'PostStatusFunction', { ...commonProps, entry: path.join(handlerDir, 'PostStatusHandler.ts') });
 
-    // --- Grant DynamoDB + S3 permissions to all lambdas ---
-    const allLambdas = [
+    // --- SQS-triggered Lambdas ---
+    // Queue 1 processor: fans out to follower batches → Queue 2
+    const postStatusQueueLambda = new NodejsFunction(this, 'PostStatusQueueFunction', {
+      ...commonProps,
+      entry: path.join(handlerDir, 'PostStatusQueueHandler.ts'),
+      timeout: cdk.Duration.seconds(60), // needs more time for large follower lists
+      environment: {
+        ...commonProps.environment,
+        UPDATE_FEED_QUEUE_URL: updateFeedQueue.queueUrl,
+      },
+    });
+
+    // Queue 2 processor: writes feed items to DynamoDB
+    const updateFeedQueueLambda = new NodejsFunction(this, 'UpdateFeedQueueFunction', {
+      ...commonProps,
+      entry: path.join(handlerDir, 'UpdateFeedQueueHandler.ts'),
+      timeout: cdk.Duration.seconds(30),
+    });
+
+    // Wire SQS → Lambda event sources
+    postStatusQueueLambda.addEventSource(
+      new lambdaEventSources.SqsEventSource(postStatusQueue, { batchSize: 1 })
+    );
+    updateFeedQueueLambda.addEventSource(
+      new lambdaEventSources.SqsEventSource(updateFeedQueue, {
+        batchSize: 5, // process up to 5 batches of 100 followers at a time
+      })
+    );
+
+    // --- Grant DynamoDB + S3 permissions to all API lambdas ---
+    const apiLambdas = [
       loginLambda, registerLambda, logoutLambda, getUserLambda,
       getFollowersLambda, getFolloweesLambda, isFollowerStatusLambda,
       getFollowerCountLambda, getFolloweeCountLambda,
       followLambda, unfollowLambda,
       getFeedLambda, getStoryLambda, postStatusLambda,
     ];
-    for (const fn of allLambdas) {
+    for (const fn of apiLambdas) {
       userTable.grantReadWriteData(fn);
       authTokenTable.grantReadWriteData(fn);
       followTable.grantReadWriteData(fn);
       statusTable.grantReadWriteData(fn);
       feedTable.grantReadWriteData(fn);
       imageBucket.grantReadWrite(fn);
-      // grantReadWrite does not include PutObjectAcl — add it explicitly
       fn.addToRolePolicy(new iam.PolicyStatement({
         actions: ['s3:PutObjectAcl'],
         resources: [imageBucket.arnForObjects('*')],
       }));
     }
 
+    // postStatusLambda needs to send to Queue 1
+    postStatusQueue.grantSendMessages(postStatusLambda);
+
+    // Queue 1 processor needs read on follows + send to Queue 2
+    followTable.grantReadData(postStatusQueueLambda);
+    updateFeedQueue.grantSendMessages(postStatusQueueLambda);
+
+    // Queue 2 processor needs write to feed table
+    feedTable.grantReadWriteData(updateFeedQueueLambda);
+    // Also needs auth token table access (BaseService uses it even for queue handlers)
+    authTokenTable.grantReadWriteData(postStatusQueueLambda);
+    authTokenTable.grantReadWriteData(updateFeedQueueLambda);
+    statusTable.grantReadWriteData(postStatusQueueLambda);
+    statusTable.grantReadWriteData(updateFeedQueueLambda);
+
     new cdk.CfnOutput(this, 'ImageBucketName', {
       value: imageBucket.bucketName,
       description: 'S3 bucket for Tweeter profile images',
+    });
+
+    new cdk.CfnOutput(this, 'PostStatusQueueUrl', {
+      value: postStatusQueue.queueUrl,
+      description: 'SQS Queue URL for post-status fan-out (Queue 1)',
+    });
+
+    new cdk.CfnOutput(this, 'UpdateFeedQueueUrl', {
+      value: updateFeedQueue.queueUrl,
+      description: 'SQS Queue URL for feed update batches (Queue 2)',
     });
 
     // --- API Gateway ---
@@ -172,8 +244,7 @@ export class TweeterCdkStack extends cdk.Stack {
       },
     });
 
-    // Ensure CORS headers appear on API Gateway-level errors (throttling, bad request body, etc.)
-    // Without these, browser preflight errors are swallowed with no CORS header.
+    // Ensure CORS headers appear on API Gateway-level errors
     const corsHeaders = {
       'Access-Control-Allow-Origin': "'*'",
       'Access-Control-Allow-Headers': "'Content-Type,Authorization'",
@@ -228,7 +299,7 @@ export class TweeterCdkStack extends cdk.Stack {
 
     // /status
     this.addMethod(this.api.root.addResource('status').addResource('post'), postStatusLambda, '/status/post',
-      'Posts a new status on behalf of the authenticated user. The status is added to the user\'s story and their followers\' feeds.');
+      'Posts a new status on behalf of the authenticated user. The status is added to the story synchronously; feed fan-out happens asynchronously via SQS.');
 
     // --- Publish documentation version ---
     const docVersion = new CfnDocumentationVersion(this, 'ApiDocVersion', {
@@ -237,7 +308,6 @@ export class TweeterCdkStack extends cdk.Stack {
       description: 'Tweeter API Documentation v1.0',
     });
 
-    // Associate doc version with the deployed stage
     const cfnStage = this.api.deploymentStage.node.defaultChild as CfnStage;
     cfnStage.documentationVersion = '1.0';
     cfnStage.addDependency(docVersion);
@@ -258,7 +328,6 @@ export class TweeterCdkStack extends cdk.Stack {
       methodResponses: METHOD_RESPONSES,
     });
 
-    // Derive a unique ID from the path (e.g. "/follower/list" -> "DocFollowerList")
     const docId = 'Doc' + apiPath.split('/').filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
     new CfnDocumentationPart(this, docId, {
       location: { type: 'METHOD', path: apiPath, method: 'POST' },
