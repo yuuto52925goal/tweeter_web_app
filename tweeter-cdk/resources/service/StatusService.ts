@@ -75,7 +75,10 @@ export class StatusService extends BaseService {
     if (followerAliases.length === 0) return;
 
     const BATCH = 100; // followers per Queue-2 message
+    let count = 0;
     for (let i = 0; i < followerAliases.length; i += BATCH) {
+      count++;
+      console.log(`Sending batch ${count} of ${Math.ceil(followerAliases.length / BATCH)}`);
       const batch = followerAliases.slice(i, i + BATCH);
       await sqsClient.send(
         new SendMessageCommand({

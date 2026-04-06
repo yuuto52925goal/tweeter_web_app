@@ -106,12 +106,21 @@ export class TweeterCdkStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
+    // Dead Letter Queue
+    const deadLetterQueue = new sqs.Queue(this, 'TweeterDLQ', {
+      queueName: 'tweeter-dead-letter-queue',
+      retentionPeriod: cdk.Duration.days(7), 
+    });
     // --- SQS Queues for async feed fan-out ---
     // Queue 1: receives one message per postStatus call
     const postStatusQueue = new sqs.Queue(this, 'PostStatusQueue', {
       queueName: 'tweeter-post-status',
       visibilityTimeout: cdk.Duration.seconds(60),
       retentionPeriod: cdk.Duration.days(1),
+      deadLetterQueue: {
+        queue: deadLetterQueue,
+        maxReceiveCount: 3, 
+      },
     });
 
     // Queue 2: receives one message per batch of 100 followers
@@ -119,6 +128,10 @@ export class TweeterCdkStack extends cdk.Stack {
       queueName: 'tweeter-update-feed',
       visibilityTimeout: cdk.Duration.seconds(60),
       retentionPeriod: cdk.Duration.days(1),
+      deadLetterQueue: {
+        queue: deadLetterQueue,
+        maxReceiveCount: 5,
+      }
     });
 
     const handlerDir = path.join(__dirname, '../resources/lambdaHandler');

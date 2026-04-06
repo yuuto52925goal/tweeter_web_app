@@ -20,19 +20,29 @@ export class DynamoDBFeedDAO extends DynamoDBDAOBase implements IFeedDAO {
     );
   }
 
-  // Fan-out: write one feed item per recipient in batches of 25
+  // Fan-out: write one feed item per recipient in batches of 25.
+  // Retries UnprocessedItems with exponential backoff so throttled writes
+  // are not silently dropped when the table is near its WCU limit.
   async putFeedItems(recipientAliases: string[], status: StatusDto): Promise<void> {
     for (let i = 0; i < recipientAliases.length; i += BATCH_SIZE) {
       const batch = recipientAliases.slice(i, i + BATCH_SIZE);
-      await this.docClient.send(
-        new BatchWriteCommand({
-          RequestItems: {
-            [TABLE]: batch.map((alias) => ({
-              PutRequest: { Item: this.toItem(alias, status) },
-            })),
-          },
-        })
-      );
+      let requestItems: Record<string, any[]> = {
+        [TABLE]: batch.map((alias) => ({
+          PutRequest: { Item: this.toItem(alias, status) },
+        })),
+      };
+
+      let delay = 100;
+      while (requestItems[TABLE]?.length > 0) {
+        const result = await this.docClient.send(
+          new BatchWriteCommand({ RequestItems: requestItems })
+        );
+        const unprocessed = result.UnprocessedItems?.[TABLE];
+        if (!unprocessed || unprocessed.length === 0) break;
+        requestItems = { [TABLE]: unprocessed };
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay = Math.min(delay * 2, 5000);
+      }
     }
   }
 
